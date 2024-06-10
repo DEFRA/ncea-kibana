@@ -1,44 +1,176 @@
-# These are populated when your service is created via the ADP Portal scaffolder. Do not change these, as they are abstracted from your service and are mandatory. They are for your reference here.
-name: ncea-kibana
-namespace: ncea-search
-workstream: ncea-search
+---
+elasticsearchHosts: ""
+elasticsearchCertificateSecret:
+elasticsearchCertificateAuthoritiesFile:
+elasticsearchCredentialSecret:
 
-# You may add further labels to identify the service or what your component does.
-labels:
-  component: web
+replicas:
 
-# Here you can define your Priority classes, min/max replicables etc. Empty block does the HELM Library defaults.
-deployment: {}
+# Extra environment variables to append to this nodeGroup
+# This will be appended to the current 'env:' key. You can use any of the kubernetes env
+# syntax here
+extraEnvs:
+  - name: "NODE_OPTIONS"
+    value: "--max-old-space-size=1800"
+#  - name: MY_ENVIRONMENT_VAR
+#    value: the_value_goes_here
 
-# These may be changed. See here: https://github.com/DEFRA/adp-helm-library?tab=readme-ov-file#container-template
-container:
-  memCpuTier: L
-  port: 3001
+# Allows you to load environment variables from kubernetes secret or config map
+envFrom: []
+# - secretRef:
+#     name: env-secret
+# - configMapRef:
+#     name: config-map
 
-# These may be changed. See here: https://github.com/DEFRA/adp-helm-library?tab=readme-ov-file#container-template
-livenessProbe:
-  path: /healthz
-  port: 3001
-  initialDelaySeconds: 20
-  periodSeconds: 10
-  failureThreshold: 3
-  timeoutSeconds: 5
+# A list of secrets and their paths to mount inside the pod
+# This is useful for mounting certificates for security and for mounting
+# the X-Pack license
+secretMounts: []
+#  - name: kibana-keystore
+#    secretName: kibana-keystore
+#    path: /usr/share/kibana/data/kibana.keystore
+#    subPath: kibana.keystore # optional
 
-# These may be changed. See here: https://github.com/DEFRA/adp-helm-library?tab=readme-ov-file#container-template
-readinessProbe:
-  path: /healthy
-  port: 3001
-  initialDelaySeconds: 30
-  periodSeconds: 10
-  failureThreshold: 3
-  timeoutSeconds: 5
+hostAliases: []
+#- ip: "127.0.0.1"
+#  hostnames:
+#  - "foo.local"
+#  - "bar.local"
 
-# These are populated when your service is created via the ADP Portal scaffolder. Do not change these, as they are abstracted from your service and are mandatory. They are for your reference here.
-# Your URL will be your <service-name>.<environment>.adp.defra.gov.uk for a front-end Web UI component. Azure Front Door is the Global Load Balancer, CDN and WAF. Nginx is the in-cluster ingress controller.
+image: ""
+imageTag: ""
+imagePullPolicy: "IfNotPresent"
+
+# additionals labels
+labels: {}
+
+annotations: {}
+
+podAnnotations: {}
+# iam.amazonaws.com/role: es-cluster
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: "1000Mi"
+  limits:
+    cpu: "500m"
+    memory: "1000Mi"
+
+protocol: http
+
+serverHost: "0.0.0.0"
+
+healthCheckPath: "/app/kibana"
+
+# Allows you to add any config files in /usr/share/kibana/config/
+# such as kibana.yml
+kibanaConfig:
+  kibana.yml: |
+    xpack.security.enabled: true
+#     key:
+#       nestedkey: value
+
+# If Pod Security Policy in use it may be required to specify security context as well as service account
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  # readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+
+serviceAccount: ""
+
+# Whether or not to automount the service account token in the pod. Normally, Kibana does not need this
+automountToken: true
+
+# This is the PriorityClass settings as defined in
+# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+priorityClassName: ""
+
+httpPort: 5601
+
+extraVolumes:
+  []
+  # - name: extras
+  #   emptyDir: {}
+
+extraVolumeMounts:
+  []
+  # - name: extras
+  #   mountPath: /usr/share/extras
+  #   readOnly: true
+  #
+
+extraContainers: []
+# - name: dummy-init
+#   image: busybox
+#   command: ['echo', 'hey']
+
+extraInitContainers: []
+# - name: dummy-init
+#   image: busybox
+#   command: ['echo', 'hey']
+
+updateStrategy:
+  type: "Recreate"
+
+service:
+  type: ClusterIP
+  loadBalancerIP: ""
+  port: 5601
+  nodePort: ""
+  labels: {}
+  annotations: {}
+  # cloud.google.com/load-balancer-type: "Internal"
+  # service.beta.kubernetes.io/aws-load-balancer-internal: 0.0.0.0/0
+  # service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+  # service.beta.kubernetes.io/openstack-internal-load-balancer: "true"
+  # service.beta.kubernetes.io/cce-load-balancer-internal-vpc: "true"
+  loadBalancerSourceRanges: []
+  # 0.0.0.0/0
+  httpPortName: http
+
 ingress:
-  class: nginx
-  endpoint: ncea-kibana
-  server: adp.defra.gov.uk
-  type: minion
-  path: /
-  defaultPath: /
+  enabled: false
+  className: "nginx"
+  pathtype: ImplementationSpecific
+  annotations: {}
+  # kubernetes.io/ingress.class: nginx
+  # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: kibana-example.local
+      paths:
+        - path: /
+  #tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+readinessProbe:
+  failureThreshold: 3
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  successThreshold: 3
+  timeoutSeconds: 5
+
+imagePullSecrets: []
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+nameOverride: ""
+fullnameOverride: ""
+
+lifecycle: {}
+# preStop:
+#   exec:
+#     command: ["/bin/sh", "-c", "echo Hello from the postStart handler > /usr/share/message"]
+# postStart:
+#   exec:
+#     command: ["/bin/sh", "-c", "echo Hello from the postStart handler > /usr/share/message"]
